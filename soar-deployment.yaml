@@ -1,0 +1,42 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soar-responder
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: soar-responder
+  template:
+    metadata:
+      labels:
+        app: soar-responder
+    spec:
+      volumes:
+        - name: script-volume
+          configMap:
+            name: soar-script-config
+        - name: app-deps
+          emptyDir: {}
+      initContainers:
+        - name: dependency-installer
+          image: python:3.10-slim
+          command: ["pip", "install", "kubernetes", "flask", "--target", "/shared-libs"]
+          volumeMounts:
+            - name: app-deps
+              mountPath: /shared-libs
+      containers:
+        - name: python-responder
+          image: python:3.10-slim
+          command: ["python", "/app/soar_responder.py"]
+          env:
+            - name: PYTHONPATH
+              value: "/shared-libs"
+          volumeMounts:
+            - name: script-volume
+              mountPath: /app
+            - name: app-deps
+              mountPath: /shared-libs
+          ports:
+            - containerPort: 8080
