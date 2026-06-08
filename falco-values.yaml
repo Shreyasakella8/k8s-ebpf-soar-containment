@@ -1,0 +1,14 @@
+﻿# Custom Falco Kernel Profiler Tuning
+driver:
+  kind: modern_ebpf
+
+tty: true
+
+# Advanced SIEM Routing Fabric
+falco:
+  json_output: true
+  
+  # Forward kernel telemetry directly to our secure SOAR Engine
+  http_output:
+    enabled: true
+    url: "http://soar-responder-service.monitoring.svc.cluster.local:8080"

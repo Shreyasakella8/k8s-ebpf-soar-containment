@@ -1,0 +1,47 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compromised-web-app
+  namespace: production
+  labels:
+    app: compromised-web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: compromised-web-app
+  template:
+    metadata:
+      labels:
+        app: compromised-web-app
+    spec:
+      volumes:
+        - name: web-volume
+          configMap:
+            name: web-app-config
+        - name: web-deps
+          emptyDir: {}
+      initContainers:
+        - name: web-dependency-installer
+          image: python:3.10-slim
+          command: [
+            "/bin/sh", "-c",
+            "apt-get update && apt-get install -y iputils-ping && pip install flask --target /web-libs"
+          ]
+          volumeMounts:
+            - name: web-deps
+              mountPath: /web-libs
+      containers:
+        - name: web-server
+          image: python:3.10-slim
+          command: ["python", "/app/vulnerable_app.py"]
+          env:
+            - name: PYTHONPATH
+              value: "/web-libs"
+          volumeMounts:
+            - name: web-volume
+              mountPath: /app
+            - name: web-deps
+              mountPath: /web-libs
+          ports:
+            - containerPort: 80
