@@ -1,11 +1,38 @@
-﻿# Cloud-Native SOAR: eBPF-Driven Runtime Detection & Automated Containment
+# Automated Kubernetes Runtime Detection & Containment (eBPF + SOAR)
 
-An enterprise-grade, closed-loop automated incident response architecture inside a Kubernetes cluster. This project leverages kernel-level eBPF instrumentation to detect real-time container breaches and execute sub-second automated mitigation.
+A production-grade, closed-loop incident response pipeline built inside a Kubernetes cluster. This project demonstrates how to orchestrate real-time threat detection via eBPF kernel hooks and seamlessly link it to an automated containment engine to minimize attacker dwell time.
 
-## Architecture Overview
-1. **Telemetry & Detection:** Falco deploys a modern eBPF probe into the worker node kernel to intercept system calls (`syscall`) bypassing standard user-space restrictions.
-2. **Orchestration / SOAR Engine:** A multi-container Python Flask microservice receives structured JSON alert webhooks via internal cluster routing.
-3. **Automated Containment:** Upon verifying a high-risk runtime exploit (e.g., a terminal shell execution), the Python engine interacts with the Kubernetes CoreV1Api to instantly evict the compromised workload with zero-second grace periods.
+---
 
-## Verification & Proof of Concept
-During a simulated terminal hijack exploit inside a target pod, the eBPF sensor registered the violation and triggered the SOAR webhook. The automation engine successfully evicted the compromised workload within **291 milliseconds**, returning an exit code `137` (SIGKILL) to the intruder.
+## 🏗️ Architecture Overview
+
+The system architecture consists of three core engineering layers:
+1. **Vulnerable Vector (Production Namespace):** A frontend Python Flask application mimicking a network diagnostic tool exposed to a simulated Remote Command Injection vulnerability.
+2. **Detection Layer (Monitoring Namespace):** CNCF Falco tracking kernel-level system calls via eBPF probes. It actively flags anomalous behaviors such as unauthorized container terminal breakouts (`bin/bash` spawns).
+3. **SOAR Engine (Monitoring Namespace):** A custom Python automation responder that consumes Falco's structured JSON alert webhooks, dynamically looks up the target asset, and orchestrates an instantaneous eviction policy using the Kubernetes API client.
+
+```text
+[ Attacker Injection ] 
+         │
+         ▼
+ ┌───────────────┐
+ │  Web App Pod  │ ──( Spawns /bin/bash System Call )
+ └───────────────┘                   │
+                                     ▼
+                        ┌────────────────────────┐
+                        │ Falco Agent Engine     │ (eBPF Kernel Probe)
+                        └────────────────────────┘
+                                     │
+                        ( Ships JSON HTTP Alert Webhook )
+                                     │
+                                     ▼
+                        ┌────────────────────────┐
+                        │ Custom SOAR Responder  │ (Telemetry Parsing Engine)
+                        └────────────────────────┘
+                                     │
+                         ( Issues Eviction Request )
+                                     │
+                                     ▼
+                        ┌────────────────────────┐
+                        │ Kubernetes API Server  │ ──( Evicts Compromised Pod )
+                        └────────────────────────┘
