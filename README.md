@@ -36,3 +36,13 @@ The system architecture consists of three core engineering layers:
                         ┌────────────────────────┐
                         │ Kubernetes API Server  │ ──( Evicts Compromised Pod )
                         └────────────────────────┘
+
+
+
+
+https://github.com/user-attachments/assets/256d26dd-f402-4e74-bc1b-35837f0a68dd
+
+
+
+
+
